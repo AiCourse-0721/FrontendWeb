@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { checkHealth } from '../api.js'
 
+const STATUS_LABEL = {
+  idle: '連線中…',
+  ok: '後端服務正常',
+  bad: '後端服務異常'
+}
 
 export default function SettingsBar() {
   const [status, setStatus] = useState('idle') // idle | ok | bad
@@ -20,10 +25,8 @@ export default function SettingsBar() {
   }, [])
 
   return (
-    <div className="settings-bar">
-      <span className={`status-dot ${status}`} title="後端連線狀態" />
-      <label>後端服務</label>
-      <span className="api-base-readout">{status}</span>
+    <div className="status-indicator" title={STATUS_LABEL[status]}>
+      <span className={`status-dot ${status}`} />
     </div>
   )
 }

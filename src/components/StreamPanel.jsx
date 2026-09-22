@@ -7,7 +7,7 @@ const INTERVAL_OPTIONS = [
   { label: '慢 (2s)', value: 2000 }
 ]
 
-export default function StreamPanel() {
+export default function StreamPanel({ onResult }) {
   const videoRef = useRef(null)
   const canvasRef = useRef(document.createElement('canvas'))
   const timerRef = useRef(null)
@@ -16,7 +16,6 @@ export default function StreamPanel() {
 
   const [active, setActive] = useState(false)
   const [intervalMs, setIntervalMs] = useState(1000)
-  const [withClassify, setWithClassify] = useState(false)
   const [error, setError] = useState(null)
   const [lastDetection, setLastDetection] = useState(null)
   const [lastClassification, setLastClassification] = useState(null)
@@ -68,9 +67,12 @@ export default function StreamPanel() {
         inFlightRef.current = true
         const start = performance.now()
         try {
-          const { detection, classification } = await detectStreamFrame(blob, { withClassify })
+          const { detection, classification } = await detectStreamFrame(blob, { withClassify: true })
           setLastDetection(detection)
           setLastClassification(classification)
+          if (classification) {
+            onResult?.({ class: classification.class_name, ...classification })
+          }
           setLatency(Math.round(performance.now() - start))
           setFrameCount((n) => n + 1)
           setError(null)
@@ -103,11 +105,6 @@ export default function StreamPanel() {
         <span className="card-title">
           <span className="icon">🎥</span> 即時影像辨識
         </span>
-        <span className="card-tag">API 3 · 輪詢 /api/v1/detect</span>
-      </div>
-
-      <div className="alert info" style={{ marginBottom: 16 }}>
-        後端目前未提供獨立即時串流路由，此面板以固定頻率擷取畫面、輪詢呼叫 YOLO 偵測 API 來模擬即時辨識。
       </div>
 
       <div className="stream-viewport">
@@ -134,7 +131,7 @@ export default function StreamPanel() {
           value={intervalMs}
           onChange={(e) => changeInterval(Number(e.target.value))}
           style={{
-            background: 'rgba(3,8,16,0.7)',
+            background: 'rgba(10,4,20,0.7)',
             border: '1px solid var(--panel-border)',
             color: 'var(--text)',
             borderRadius: 8,
@@ -148,16 +145,6 @@ export default function StreamPanel() {
           ))}
         </select>
       </div>
-
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-dim)', marginTop: 10 }}>
-        <input
-          type="checkbox"
-          checked={withClassify}
-          onChange={(e) => setWithClassify(e.target.checked)}
-          style={{ width: 16, height: 16 }}
-        />
-        每次同時執行 CNN/ViT 狀態分類（較慢，會多呼叫一次 /classify）
-      </label>
 
       <div className="controls-row">
         {!active ? (

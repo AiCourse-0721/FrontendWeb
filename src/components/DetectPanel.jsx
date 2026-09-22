@@ -11,7 +11,7 @@ export default function DetectPanel({ onResult }) {
   const [detection, setDetection] = useState(null)
   const [classification, setClassification] = useState(null)
 
-  function pickFile(f) {
+  async function pickFile(f) {
     if (!f) return
     setFile(f)
     setDetection(null)
@@ -19,14 +19,10 @@ export default function DetectPanel({ onResult }) {
     setError(null)
     onResult?.(null)
     setPreviewUrl(URL.createObjectURL(f))
-  }
 
-  async function handleSubmit() {
-    if (!file) return
     setLoading(true)
-    setError(null)
     try {
-      const { detection: det, classification: cls } = await analyzeTireImage(file)
+      const { detection: det, classification: cls } = await analyzeTireImage(f)
       setDetection(det)
       setClassification(cls)
       onResult?.(cls ? { class: cls.class_name, ...cls } : null)
@@ -56,7 +52,6 @@ export default function DetectPanel({ onResult }) {
         <span className="card-title">
           <span className="icon">📷</span> 輪胎影像偵測
         </span>
-        <span className="card-tag">API 1 · /api/v1/detect + /classify</span>
       </div>
 
       <div
@@ -74,7 +69,7 @@ export default function DetectPanel({ onResult }) {
         }}
       >
         <div>拖曳或點擊上傳輪胎照片</div>
-        <div className="hint">支援 JPG / JPEG / PNG</div>
+        <div className="hint">支援 JPG / JPEG / PNG，上傳後自動辨識</div>
         <input
           ref={inputRef}
           type="file"
@@ -89,17 +84,20 @@ export default function DetectPanel({ onResult }) {
         </div>
       )}
 
-      <div className="controls-row">
-        <button className="btn full" disabled={!file || loading} onClick={handleSubmit} type="button">
-          {loading && <span className="spinner" />}
-          {loading ? '辨識中…' : '送出偵測'}
-        </button>
-        {file && (
-          <button className="btn ghost" onClick={reset} type="button">
+      {loading && (
+        <div className="alert info">
+          <span className="spinner" />
+          辨識中…
+        </div>
+      )}
+
+      {file && !loading && (
+        <div className="controls-row">
+          <button className="btn ghost full" onClick={reset} type="button">
             清除
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {error && <div className="alert error">{error}</div>}
 

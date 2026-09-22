@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { predictTireRul } from '../api.js'
 
 const DEFAULTS = {
@@ -6,6 +6,8 @@ const DEFAULTS = {
   expected_tyre_life: 82318,
   kilometers_driven: 26858
 }
+
+const DEBOUNCE_MS = 500
 
 export default function RulPanel({ detection }) {
   const [form, setForm] = useState(DEFAULTS)
@@ -19,23 +21,32 @@ export default function RulPanel({ detection }) {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
-  async function handleSubmit() {
-    setLoading(true)
-    setError(null)
-    try {
-      const payload = {
-        current_tread_depth: Number(form.current_tread_depth),
-        expected_tyre_life: Number(form.expected_tyre_life),
-        kilometers_driven: Number(form.kilometers_driven)
+  useEffect(() => {
+    if (blockedClass) return
+    const depth = Number(form.current_tread_depth)
+    const life = Number(form.expected_tyre_life)
+    const km = Number(form.kilometers_driven)
+    if (!(depth > 0) || !(life > 0) || !(km > 0)) return
+
+    const timer = setTimeout(async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await predictTireRul({
+          current_tread_depth: depth,
+          expected_tyre_life: life,
+          kilometers_driven: km
+        })
+        setResult(data)
+      } catch (err) {
+        setError(err.message || '預測失敗')
+      } finally {
+        setLoading(false)
       }
-      const data = await predictTireRul(payload)
-      setResult(data)
-    } catch (err) {
-      setError(err.message || '預測失敗')
-    } finally {
-      setLoading(false)
-    }
-  }
+    }, DEBOUNCE_MS)
+
+    return () => clearTimeout(timer)
+  }, [form.current_tread_depth, form.expected_tyre_life, form.kilometers_driven, blockedClass])
 
   return (
     <section className="card">
@@ -43,7 +54,6 @@ export default function RulPanel({ detection }) {
         <span className="card-title">
           <span className="icon">🔧</span> 剩餘壽命權重分析
         </span>
-        <span className="card-tag">API 2 · /api/v1/predict-rul</span>
       </div>
 
       {blockedClass ? (
@@ -86,20 +96,22 @@ export default function RulPanel({ detection }) {
             />
           </div>
 
-          <button className="btn full" disabled={loading} onClick={handleSubmit} type="button">
-            {loading && <span className="spinner" />}
-            {loading ? '預測中…' : '送出權重進行預測'}
-          </button>
+          {loading && (
+            <div className="alert info">
+              <span className="spinner" />
+              預測中…
+            </div>
+          )}
 
           {error && <div className="alert error">{error}</div>}
 
-          {result && (
+          {result && !loading && (
             <div className="rul-result">
               <div className="value">
                 約 {Number(result.predicted_rul_km ?? 0).toLocaleString()}
                 <small>km</small>
               </div>
-              <div className="result-sub">以上為 AI 模型估算結果，實際壽命仍需由專業人員檢查確認。</div>
+              <div className="result-sub">以上為 AI 模型估算結果，實際壽命仍需由專業人員檢查確認，變更數值會自動重新預測。</div>
             </div>
           )}
         </>
