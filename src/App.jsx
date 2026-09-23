@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import BackgroundFX from './components/BackgroundFX.jsx'
 import Header from './components/Header.jsx'
-import SettingsBar from './components/SettingsBar.jsx'
+import ThemeToggle from './components/ThemeToggle.jsx'
 import DetectPanel from './components/DetectPanel.jsx'
 import RulPanel from './components/RulPanel.jsx'
 import StreamPanel from './components/StreamPanel.jsx'
@@ -11,9 +11,36 @@ const MODES = [
   { id: 'live', label: '即時影像辨識', icon: '🎥' }
 ]
 
+const DAY_START_HOUR = 6
+const DAY_END_HOUR = 18
+const THEME_CHECK_INTERVAL_MS = 60000
+
+function currentTheme() {
+  const hour = new Date().getHours()
+  return hour >= DAY_START_HOUR && hour < DAY_END_HOUR ? 'light' : 'dark'
+}
+
 export default function App() {
   const [mode, setMode] = useState('detect')
   const [detection, setDetection] = useState(null)
+  const [theme, setTheme] = useState(currentTheme)
+  const autoThemeRef = useRef(true)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (autoThemeRef.current) setTheme(currentTheme())
+    }, THEME_CHECK_INTERVAL_MS)
+    return () => clearInterval(timer)
+  }, [])
+
+  function toggleTheme() {
+    autoThemeRef.current = false
+    setTheme((t) => (t === 'light' ? 'dark' : 'light'))
+  }
 
   function switchMode(next) {
     if (next === mode) return
@@ -24,9 +51,9 @@ export default function App() {
   return (
     <>
       <BackgroundFX />
+      <ThemeToggle theme={theme} onToggle={toggleTheme} />
       <div className="app-shell">
         <Header />
-        <SettingsBar />
 
         <nav className="mode-toggle">
           {MODES.map((m) => (

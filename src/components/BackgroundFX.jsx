@@ -3,6 +3,11 @@ import { useEffect, useRef } from 'react'
 const PARTICLE_COUNT = 70
 const LINK_DIST = 130
 
+function currentPrimaryColor() {
+  const value = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()
+  return value || '#00e5ff'
+}
+
 export default function BackgroundFX() {
   const canvasRef = useRef(null)
 
@@ -32,6 +37,7 @@ export default function BackgroundFX() {
     }
 
     function step() {
+      const color = currentPrimaryColor()
       ctx.clearRect(0, 0, width, height)
 
       for (const p of particles) {
@@ -42,8 +48,9 @@ export default function BackgroundFX() {
 
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(0, 229, 255, 0.65)'
-        ctx.shadowColor = 'rgba(0, 229, 255, 0.8)'
+        ctx.globalAlpha = 0.65
+        ctx.fillStyle = color
+        ctx.shadowColor = color
         ctx.shadowBlur = 6
         ctx.fill()
       }
@@ -60,12 +67,14 @@ export default function BackgroundFX() {
             ctx.beginPath()
             ctx.moveTo(a.x, a.y)
             ctx.lineTo(b.x, b.y)
-            ctx.strokeStyle = `rgba(0, 229, 255, ${0.12 * (1 - dist / LINK_DIST)})`
+            ctx.globalAlpha = 0.12 * (1 - dist / LINK_DIST)
+            ctx.strokeStyle = color
             ctx.lineWidth = 1
             ctx.stroke()
           }
         }
       }
+      ctx.globalAlpha = 1
 
       raf = requestAnimationFrame(step)
     }

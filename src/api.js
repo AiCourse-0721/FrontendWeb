@@ -89,16 +89,22 @@ export async function predictTireRul(payload, { signal } = {}) {
 }
 
 /**
- * API 3 — 即時影像：後端未提供獨立 /stream 路由，改為輪詢呼叫 /api/v1/detect
- * （選擇性再串接 /classify）以逼近即時辨識效果
+ * API 3 — 即時影像快速偵測：POST /api/v1/detect/quick (multipart, field "file")
+ * 只跑第一階段 YOLO，給串流輪詢用，找到輪胎就回 { detected: true }；
+ * 沒找到後端回 404，這裡視為正常的「這幀沒有」結果，不當作錯誤丟出。
  */
-export async function detectStreamFrame(blob, { withClassify = false, signal } = {}) {
-  const detection = await detectTire(blob, { withAnnotatedImage: true, withCrop: withClassify, signal })
-  let classification = null
-  if (withClassify && detection.detected && detection.crop_image_base64) {
-    classification = await classifyTire(detection.crop_image_base64, { signal })
+export async function quickDetectTire(blob, { signal } = {}) {
+  const form = new FormData()
+  form.append('file', blob, 'frame.jpg')
+  const res = await fetch(`${API_BASE_URL}/api/v1/detect/quick`, {
+    method: 'POST',
+    body: form,
+    signal
+  })
+  if (res.status === 404) {
+    return { detected: false }
   }
-  return { detection, classification }
+  return handleResponse(res)
 }
 
 /**

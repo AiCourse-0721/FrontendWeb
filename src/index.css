@@ -1,9 +1,10 @@
 :root {
   --bg: #05070d;
+  --bg-mid: #080d18;
   --bg-alt: #0a0f1c;
   --panel: rgba(13, 20, 36, 0.72);
-  --panel-border: rgba(0, 229, 255, 0.28);
-  --panel-border-strong: rgba(0, 229, 255, 0.55);
+  --panel-border: color-mix(in srgb, var(--primary) 28%, transparent);
+  --panel-border-strong: color-mix(in srgb, var(--primary) 55%, transparent);
   --primary: #00e5ff;
   --primary-soft: #8beffff2;
   --secondary: #ff2bd6;
@@ -13,9 +14,27 @@
   --amber: #ffb020;
   --text: #dff8ff;
   --text-dim: #7fa3b0;
+  --shadow-ambient: rgba(0, 0, 0, 0.45);
   --font-display: 'Orbitron', 'Noto Sans TC', sans-serif;
   --font-body: 'Noto Sans TC', 'Orbitron', sans-serif;
   --radius: 18px;
+}
+
+:root[data-theme='light'] {
+  --bg: #f3f6fb;
+  --bg-mid: #e7edf7;
+  --bg-alt: #ffffff;
+  --panel: rgba(255, 255, 255, 0.78);
+  --primary: #0089c8;
+  --primary-soft: #145a7d;
+  --secondary: #d6008f;
+  --tertiary: #5b3fd1;
+  --green: #1f9d46;
+  --red: #e0263f;
+  --amber: #c97a00;
+  --text: #101826;
+  --text-dim: #5b6b82;
+  --shadow-ambient: rgba(30, 41, 59, 0.12);
 }
 
 * {
@@ -30,17 +49,19 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.6s ease, color 0.6s ease;
 }
 
 body {
   min-height: 100vh;
   background-image:
-    radial-gradient(circle at 15% 10%, rgba(0, 229, 255, 0.1), transparent 45%),
-    radial-gradient(circle at 85% 0%, rgba(124, 58, 237, 0.14), transparent 40%),
-    radial-gradient(circle at 50% 100%, rgba(255, 43, 214, 0.08), transparent 45%),
-    linear-gradient(180deg, #05070d 0%, #080d18 50%, #05070d 100%);
+    radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 45%),
+    radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--tertiary) 14%, transparent), transparent 40%),
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--secondary) 8%, transparent), transparent 45%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-mid) 50%, var(--bg) 100%);
   background-attachment: fixed;
   overflow-x: hidden;
+  transition: background-image 0.6s ease;
 }
 
 ::selection {
@@ -78,8 +99,8 @@ body {
   z-index: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(0, 229, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 229, 255, 0.06) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--primary) 6%, transparent) 1px, transparent 1px);
   background-size: 42px 42px;
   mask-image: radial-gradient(ellipse 80% 60% at 50% 20%, black 40%, transparent 90%);
   animation: gridDrift 30s linear infinite;
@@ -119,7 +140,7 @@ body {
   font-size: clamp(30px, 6vw, 48px);
   margin: 8px 0 4px;
   color: var(--primary);
-  text-shadow: 0 0 12px rgba(0, 229, 255, 0.75), 0 0 32px rgba(0, 229, 255, 0.35);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--primary) 75%, transparent), 0 0 32px color-mix(in srgb, var(--primary) 35%, transparent);
   letter-spacing: 0.04em;
 }
 
@@ -127,6 +148,10 @@ body {
   color: var(--primary-soft);
   font-size: 16px;
   margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .hud-divider {
@@ -177,32 +202,40 @@ body {
 .mode-toggle button.active {
   color: var(--primary-soft);
   border-color: var(--primary);
-  background: linear-gradient(135deg, rgba(0, 229, 255, 0.22), rgba(124, 58, 237, 0.14));
-  box-shadow: 0 0 22px rgba(0, 229, 255, 0.35);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 22%, transparent), color-mix(in srgb, var(--tertiary) 14%, transparent));
+  box-shadow: 0 0 22px color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
-/* ---------- Status indicator ---------- */
-.status-indicator {
+/* ---------- Theme toggle ---------- */
+.theme-toggle {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 5;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-}
-
-.status-indicator .status-dot {
-  width: 10px;
-  height: 10px;
-}
-
-.status-indicator .status-label {
-  font-family: var(--font-display);
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  justify-content: center;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
   color: var(--text-dim);
-  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.15s ease, background-color 0.6s ease;
+}
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--panel-border-strong);
+  transform: translateY(-1px) rotate(12deg);
+}
+.theme-toggle svg {
+  width: 18px;
+  height: 18px;
 }
 
+/* ---------- Status dot (inline, header) ---------- */
 .status-dot {
   width: 9px;
   height: 9px;
@@ -214,6 +247,13 @@ body {
 .status-dot.ok { background: var(--green); color: var(--green); }
 .status-dot.bad { background: var(--red); color: var(--red); }
 .status-dot.idle { background: var(--amber); color: var(--amber); animation: pulseDot 1.2s ease-in-out infinite; }
+
+.status-dot.inline {
+  width: 6px;
+  height: 6px;
+  box-shadow: none;
+  opacity: 0.85;
+}
 
 /* ---------- Panels / cards ---------- */
 .panel-grid {
@@ -229,9 +269,9 @@ body {
   border-radius: var(--radius);
   padding: 22px 22px 26px;
   backdrop-filter: blur(14px);
-  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.03), 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 24px rgba(0, 229, 255, 0.06);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 3%, transparent), 0 12px 40px var(--shadow-ambient), 0 0 24px color-mix(in srgb, var(--primary) 6%, transparent);
   overflow: hidden;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.6s ease;
 }
 
 .card::before {
@@ -240,7 +280,7 @@ body {
   inset: 0;
   padding: 1px;
   border-radius: var(--radius);
-  background: linear-gradient(135deg, rgba(0, 229, 255, 0.35), transparent 30%, transparent 70%, rgba(255, 43, 214, 0.25));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 35%, transparent), transparent 30%, transparent 70%, color-mix(in srgb, var(--secondary) 25%, transparent));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -273,23 +313,23 @@ body {
 
 .card-title .icon {
   font-size: 20px;
-  filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.6));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--primary) 60%, transparent));
 }
 
 /* ---------- Dropzone ---------- */
 .dropzone {
-  border: 1.5px dashed rgba(0, 229, 255, 0.35);
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 35%, transparent);
   border-radius: 14px;
   padding: 28px 16px;
   text-align: center;
   cursor: pointer;
   transition: border-color 0.2s ease, background 0.2s ease;
-  background: rgba(0, 229, 255, 0.02);
+  background: color-mix(in srgb, var(--primary) 2%, transparent);
 }
 .dropzone:hover,
 .dropzone.dragover {
   border-color: var(--primary);
-  background: rgba(0, 229, 255, 0.06);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
 }
 .dropzone input {
   display: none;
@@ -310,7 +350,7 @@ body {
   max-height: 340px;
   border-radius: 12px;
   border: 1px solid var(--panel-border);
-  box-shadow: 0 0 24px rgba(0, 229, 255, 0.15);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
 /* ---------- Buttons ---------- */
@@ -323,13 +363,13 @@ body {
   border-radius: 10px;
   padding: 11px 22px;
   border: 1px solid var(--panel-border-strong);
-  background: linear-gradient(135deg, rgba(0, 229, 255, 0.16), rgba(124, 58, 237, 0.16));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 16%, transparent), color-mix(in srgb, var(--tertiary) 16%, transparent));
   color: var(--primary);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 .btn:hover:not(:disabled) {
-  box-shadow: 0 0 20px rgba(0, 229, 255, 0.35);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--primary) 35%, transparent);
   transform: translateY(-1px);
 }
 .btn:active:not(:disabled) {
@@ -370,7 +410,7 @@ body {
 }
 input[type='text'],
 input[type='number'] {
-  background: rgba(3, 8, 16, 0.7);
+  background: color-mix(in srgb, var(--bg) 85%, black 15%);
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   padding: 10px 12px;
@@ -383,7 +423,7 @@ input[type='number'] {
 input[type='text']:focus,
 input[type='number']:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.15);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
 /* ---------- Result display ---------- */
@@ -396,7 +436,7 @@ input[type='number']:focus {
   font-size: 30px;
   font-weight: 900;
   color: var(--primary);
-  text-shadow: 0 0 16px rgba(0, 229, 255, 0.6);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--primary) 60%, transparent);
 }
 .result-sub {
   color: var(--primary-soft);
@@ -417,15 +457,15 @@ input[type='number']:focus {
 }
 .status-pill.safe {
   color: var(--green);
-  border: 1px solid rgba(57, 255, 20, 0.5);
-  text-shadow: 0 0 10px rgba(57, 255, 20, 0.6);
-  box-shadow: 0 0 18px rgba(57, 255, 20, 0.12) inset;
+  border: 1px solid color-mix(in srgb, var(--green) 50%, transparent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--green) 60%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--green) 12%, transparent) inset;
 }
 .status-pill.warning {
   color: var(--red);
-  border: 1px solid rgba(255, 59, 59, 0.5);
-  text-shadow: 0 0 10px rgba(255, 59, 59, 0.6);
-  box-shadow: 0 0 18px rgba(255, 59, 59, 0.12) inset;
+  border: 1px solid color-mix(in srgb, var(--red) 50%, transparent);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--red) 60%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--red) 12%, transparent) inset;
 }
 
 .confidence-row {
@@ -447,7 +487,7 @@ input[type='number']:focus {
 .confidence-bar {
   height: 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--text) 10%, transparent);
   overflow: hidden;
 }
 .confidence-bar > span {
@@ -455,7 +495,7 @@ input[type='number']:focus {
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--primary), var(--tertiary));
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--primary) 50%, transparent);
   transition: width 0.4s ease;
 }
 
@@ -465,14 +505,14 @@ input[type='number']:focus {
   padding: 18px;
   border-radius: 14px;
   border: 1px solid var(--panel-border);
-  background: rgba(0, 229, 255, 0.04);
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
 }
 .rul-result .value {
   font-family: var(--font-display);
   font-size: 34px;
   font-weight: 900;
   color: var(--primary);
-  text-shadow: 0 0 16px rgba(0, 229, 255, 0.6);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--primary) 60%, transparent);
 }
 .rul-result .value small {
   font-size: 15px;
@@ -496,7 +536,7 @@ input[type='number']:focus {
 .alert.info {
   color: var(--primary-soft);
   border-color: var(--panel-border);
-  background: rgba(0, 229, 255, 0.04);
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
   text-align: center;
 }
 .alert.warn {
@@ -598,7 +638,7 @@ input[type='number']:focus {
   padding: 10px 6px;
   border-radius: 10px;
   border: 1px solid var(--panel-border);
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--text) 2%, transparent);
 }
 .stat-tile .num {
   font-family: var(--font-display);
@@ -640,7 +680,7 @@ footer.app-footer {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(0, 229, 255, 0.25);
+  border: 2px solid color-mix(in srgb, var(--primary) 25%, transparent);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
