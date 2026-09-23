@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react'
 
 const PARTICLE_COUNT = 70
 const LINK_DIST = 130
-const PALETTE = ['177, 75, 255', '255, 43, 214', '106, 91, 255']
 
 export default function BackgroundFX() {
   const canvasRef = useRef(null)
@@ -28,8 +27,7 @@ export default function BackgroundFX() {
         y: Math.random() * height,
         vx: (Math.random() - 0.5) * 0.35,
         vy: (Math.random() - 0.5) * 0.35,
-        r: Math.random() * 1.6 + 0.6,
-        color: PALETTE[Math.floor(Math.random() * PALETTE.length)]
+        r: Math.random() * 1.6 + 0.6
       }))
     }
 
@@ -44,8 +42,8 @@ export default function BackgroundFX() {
 
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${p.color}, 0.7)`
-        ctx.shadowColor = `rgba(${p.color}, 0.85)`
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.65)'
+        ctx.shadowColor = 'rgba(0, 229, 255, 0.8)'
         ctx.shadowBlur = 6
         ctx.fill()
       }
@@ -62,7 +60,7 @@ export default function BackgroundFX() {
             ctx.beginPath()
             ctx.moveTo(a.x, a.y)
             ctx.lineTo(b.x, b.y)
-            ctx.strokeStyle = `rgba(177, 75, 255, ${0.12 * (1 - dist / LINK_DIST)})`
+            ctx.strokeStyle = `rgba(0, 229, 255, ${0.12 * (1 - dist / LINK_DIST)})`
             ctx.lineWidth = 1
             ctx.stroke()
           }
