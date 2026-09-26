@@ -38,7 +38,7 @@ export default function Header() {
       <div className="eyebrow">NEURAL VISION · REALTIME INFERENCE</div>
       <h1>🛞 TireGuard AI</h1>
       <p className="subtitle">
-        智慧輪胎安全辨識系統
+        輪胎安全智慧辨識系統
         <span className={`status-dot inline ${status}`} />
       </p>
       <div className="hud-divider" />
