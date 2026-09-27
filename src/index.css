@@ -316,6 +316,51 @@ body {
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--primary) 60%, transparent));
 }
 
+/* ---------- Preview section (post-upload) ---------- */
+.preview-section {
+  text-align: center;
+}
+.preview-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+/* ---------- Model Ensemble (static display) ---------- */
+.model-section {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  background: color-mix(in srgb, var(--primary) 3%, transparent);
+}
+.model-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.model-details {
+  margin-top: 12px;
+}
+.model-details summary {
+  list-style: none;
+}
+.model-details summary::-webkit-details-marker {
+  display: none;
+}
+.model-details-content {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--panel-border);
+}
+.detail-performance-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
 /* ---------- Dropzone ---------- */
 .dropzone {
   border: 1.5px dashed color-mix(in srgb, var(--primary) 35%, transparent);

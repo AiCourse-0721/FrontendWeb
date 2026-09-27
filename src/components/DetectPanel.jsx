@@ -1,6 +1,19 @@
 import { useRef, useState } from 'react'
 import { analyzeTireImage, toDataUri } from '../api.js'
 
+// 三分類機率的欄位是 bad/bald/normal_probability，不是 good_probability
+const PROBABILITY_ROWS = [
+  { label: '異常輪胎', key: 'bad_probability' },
+  { label: '胎紋磨平', key: 'bald_probability' },
+  { label: '正常輪胎', key: 'normal_probability' },
+]
+
+const PROBABILITY_LABEL_STYLE = {
+  fontSize: '15px',
+  fontWeight: '600',
+  color: 'var(--primary)',
+}
+
 export default function DetectPanel({ onResult }) {
   const inputRef = useRef(null)
 
@@ -22,26 +35,15 @@ export default function DetectPanel({ onResult }) {
     onResult?.(null)
 
     setPreviewUrl(URL.createObjectURL(f))
-
     setLoading(true)
 
     try {
-      const {
-        detection: det,
-        classification: cls,
-      } = await analyzeTireImage(f)
+      const { detection: det, classification: cls } = await analyzeTireImage(f)
 
       setDetection(det)
       setClassification(cls)
 
-      onResult?.(
-        cls
-          ? {
-              class: cls.class_name,
-              ...cls,
-            }
-          : null
-      )
+      onResult?.(cls ? { class: cls.class_name, ...cls } : null)
     } catch (err) {
       setError(err.message || '偵測失敗')
     } finally {
@@ -62,21 +64,15 @@ export default function DetectPanel({ onResult }) {
     }
   }
 
-  // AI 分析影像
-  // 後端產生：輪胎清楚 + 背景 Gaussian Blur
-  const analysisImage = toDataUri(
-    detection?.annotated_image_base64
-  )
+  // 選完照片後 detection 回來前先用本地預覽圖，回來後換成後端標註後的影像
+  const analysisImage = toDataUri(detection?.annotated_image_base64) || previewUrl
 
   // 選擇照片後進入 AI 分析畫面
   const hasAnalysisStarted = Boolean(file)
 
   return (
     <section className="card">
-
-      {/* ==================================================
-          上傳區
-      ================================================== */}
+      {/* 上傳區 */}
       {!hasAnalysisStarted && (
         <>
           <div className="card-header">
@@ -87,9 +83,7 @@ export default function DetectPanel({ onResult }) {
           </div>
 
           <div
-            className={`dropzone ${
-              dragOver ? 'dragover' : ''
-            }`}
+            className={`dropzone ${dragOver ? 'dragover' : ''}`}
             onClick={() => inputRef.current?.click()}
             onDragOver={(e) => {
               e.preventDefault()
@@ -102,32 +96,22 @@ export default function DetectPanel({ onResult }) {
               pickFile(e.dataTransfer.files?.[0])
             }}
           >
-            <div>
-              拖曳或點擊上傳輪胎照片
-            </div>
-
-            <div className="hint">
-              支援 JPG / JPEG / PNG，上傳後自動辨識
-            </div>
+            <div>拖曳或點擊上傳輪胎照片</div>
+            <div className="hint">支援 JPG / JPEG / PNG，上傳後自動辨識</div>
 
             <input
               ref={inputRef}
               type="file"
               accept="image/jpeg,image/png"
-              onChange={(e) =>
-                pickFile(e.target.files?.[0])
-              }
+              onChange={(e) => pickFile(e.target.files?.[0])}
             />
           </div>
         </>
       )}
 
-      {/* ==================================================
-          AI 分析影像
-      ================================================== */}
+      {/* AI 分析影像 */}
       {analysisImage && (
         <div className="preview-section">
-
           <div
             className="preview-title"
             style={{
@@ -158,13 +142,10 @@ export default function DetectPanel({ onResult }) {
               }}
             />
           </div>
-
         </div>
       )}
 
-      {/* ==================================================
-          Loading
-      ================================================== */}
+      {/* Loading */}
       {loading && (
         <div className="alert info">
           <span className="spinner" />
@@ -172,48 +153,27 @@ export default function DetectPanel({ onResult }) {
         </div>
       )}
 
-      {/* ==================================================
-          清除
-      ================================================== */}
+      {/* 清除 */}
       {file && !loading && (
         <div className="controls-row">
-          <button
-            className="btn ghost full"
-            onClick={reset}
-            type="button"
-          >
+          <button className="btn ghost full" onClick={reset} type="button">
             清除
           </button>
         </div>
       )}
 
-      {/* ==================================================
-          Error
-      ================================================== */}
-      {error && (
-        <div className="alert error">
-          {error}
-        </div>
-      )}
+      {/* Error */}
+      {error && <div className="alert error">{error}</div>}
 
-      {/* ==================================================
-          未偵測到輪胎
-      ================================================== */}
+      {/* 未偵測到輪胎 */}
       {detection && !detection.detected && (
-        <div className="alert warn">
-          未偵測到輪胎，請重新上傳清楚的輪胎照片。
-        </div>
+        <div className="alert warn">未偵測到輪胎，請重新上傳清楚的輪胎照片。</div>
       )}
 
-      {/* ==================================================
-          分類結果
-      ================================================== */}
+      {/* 分類結果 */}
       {classification && (
         <div className="result-block">
-
-          {/* ==================================================
-              最終判定
-          ================================================== */}
+          {/* 最終判定 */}
           <div
             className="result-class"
             style={{
@@ -224,9 +184,7 @@ export default function DetectPanel({ onResult }) {
             {classification.display_name}
           </div>
 
-          {/* ==================================================
-              Ensemble 信心度
-          ================================================== */}
+          {/* Ensemble 信心度 */}
           <div
             className="result-sub"
             style={{
@@ -239,9 +197,7 @@ export default function DetectPanel({ onResult }) {
             {(classification.ensemble_confidence * 100).toFixed(2)}%
           </div>
 
-          {/* ==================================================
-              三分類機率
-          ================================================== */}
+          {/* 三分類機率 */}
           <div
             className="confidence-row"
             style={{
@@ -249,125 +205,25 @@ export default function DetectPanel({ onResult }) {
               marginTop: '18px',
             }}
           >
+            {PROBABILITY_ROWS.map(({ label, key }) => {
+              const value = classification[key] * 100
+              return (
+                <div className="confidence-item" key={key}>
+                  <div className="label" style={PROBABILITY_LABEL_STYLE}>
+                    <span>{label}</span>
+                    <span>{value.toFixed(2)}%</span>
+                  </div>
 
-            {/* 異常輪胎 */}
-            <div className="confidence-item">
-
-              <div
-                className="label"
-                style={{
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  color: 'var(--primary)',
-                }}
-              >
-                <span>
-                  異常輪胎
-                </span>
-
-                <span>
-                  {(classification.bad_probability * 100).toFixed(2)}%
-                </span>
-              </div>
-
-              <div
-                className="confidence-bar"
-                style={{
-                  height: '7px',
-                }}
-              >
-                <span
-                  style={{
-                    width: `${
-                      classification.bad_probability * 100
-                    }%`,
-                  }}
-                />
-              </div>
-
-            </div>
-
-            {/* 胎紋磨平 */}
-            <div className="confidence-item">
-
-              <div
-                className="label"
-                style={{
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  color: 'var(--primary)',
-                }}
-              >
-                <span>
-                  胎紋磨平
-                </span>
-
-                <span>
-                  {(classification.bald_probability * 100).toFixed(2)}%
-                </span>
-              </div>
-
-              <div
-                className="confidence-bar"
-                style={{
-                  height: '7px',
-                }}
-              >
-                <span
-                  style={{
-                    width: `${
-                      classification.bald_probability * 100
-                    }%`,
-                  }}
-                />
-              </div>
-
-            </div>
-
-            {/* 正常輪胎 */}
-            <div className="confidence-item">
-
-              <div
-                className="label"
-                style={{
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  color: 'var(--primary)',
-                }}
-              >
-                <span>
-                  正常輪胎
-                </span>
-
-                <span>
-                  {(classification.good_probability * 100).toFixed(2)}%
-                </span>
-              </div>
-
-              <div
-                className="confidence-bar"
-                style={{
-                  height: '7px',
-                }}
-              >
-                <span
-                  style={{
-                    width: `${
-                      classification.good_probability * 100
-                    }%`,
-                  }}
-                />
-              </div>
-
-            </div>
-
+                  <div className="confidence-bar" style={{ height: '7px' }}>
+                    <span style={{ width: `${value}%` }} />
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
-          {/* ==================================================
-              Model Ensemble
-          ================================================== */}
+          {/* Model Ensemble：靜態展示用數字，非後端即時資料，不隨辨識結果變動 */}
           <div className="model-section">
-
             <div
               className="model-title"
               style={{
@@ -386,13 +242,8 @@ export default function DetectPanel({ onResult }) {
                 color: '#8BEFFF',
               }}
             >
-              <span>
-                ResNet18：
-              </span>
-
-              <span>
-                44%
-              </span>
+              <span>ResNet18：</span>
+              <span>44%</span>
             </div>
 
             <div
@@ -402,20 +253,11 @@ export default function DetectPanel({ onResult }) {
                 color: '#8BEFFF',
               }}
             >
-              <span>
-                ViT-B/16：
-              </span>
-
-              <span>
-                56%
-              </span>
+              <span>ViT-B/16：</span>
+              <span>56%</span>
             </div>
 
-            {/* ==================================================
-                查看模型詳細資訊
-            ================================================== */}
             <details className="model-details">
-
               <summary
                 style={{
                   fontSize: '15px',
@@ -428,7 +270,6 @@ export default function DetectPanel({ onResult }) {
               </summary>
 
               <div className="model-details-content">
-
                 <div
                   className="detail-title"
                   style={{
@@ -448,63 +289,38 @@ export default function DetectPanel({ onResult }) {
                     color: '#8BEFFF',
                   }}
                 >
-                  <span>
-                    ResNet18 Fine-tuning：
-                  </span>
-
-                  <span>
-                    90.42%
-                  </span>
+                  <span>ResNet18 Fine-tuning：</span>
+                  <span>90.42%</span>
                 </div>
 
                 <div
                   className="detail-performance-row"
                   style={{
                     fontSize: '14px',
-                    color: '#8BEFFF'
+                    color: '#8BEFFF',
                   }}
                 >
-                  <span>
-                    ViT-B/16 Fine-tuning：
-                  </span>
-
-                  <span>
-                    89.74%
-                  </span>
+                  <span>ViT-B/16 Fine-tuning：</span>
+                  <span>89.74%</span>
                 </div>
 
                 <div
                   className="detail-performance-row"
                   style={{
                     fontSize: '14px',
-                    color: '#8BEFFF'
+                    color: '#8BEFFF',
                   }}
                 >
-                  <span>
-                    Ensemble：
-                  </span>
-
-                  <span>
-                    93.25%
-                  </span>
+                  <span>Ensemble：</span>
+                  <span>93.25%</span>
                 </div>
-
               </div>
-
             </details>
-
           </div>
 
-          {/* ==================================================
-              安全狀態
-              字體放大 2 倍
-          ================================================== */}
+          {/* 安全狀態 */}
           <div
-            className={`status-pill ${
-              classification.is_safe
-                ? 'safe'
-                : 'warning'
-            }`}
+            className={`status-pill ${classification.is_safe ? 'safe' : 'warning'}`}
             style={{
               fontSize: '24px',
               fontWeight: '700',
@@ -512,15 +328,10 @@ export default function DetectPanel({ onResult }) {
               lineHeight: '1.4',
             }}
           >
-            {classification.is_safe
-              ? '✓ 輪胎狀態：安全'
-              : '⚠ 輪胎狀態：不安全'}
+            {classification.is_safe ? '✓ 輪胎狀態：安全' : '⚠ 輪胎狀態：不安全'}
           </div>
 
-          {/* ==================================================
-              不安全提示
-              字體放大 2 倍
-          ================================================== */}
+          {/* 不安全提示 */}
           {!classification.is_safe && (
             <div
               className="alert warn"
@@ -536,10 +347,8 @@ export default function DetectPanel({ onResult }) {
                 : '偵測到輪胎異常，建議盡快前往車廠檢查。'}
             </div>
           )}
-
         </div>
       )}
-
     </section>
   )
 }
