@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { analyzeTireImage, quickDetectTire, toDataUri } from '../api.js'
+import ClassificationResult from './ClassificationResult.jsx'
 
 // 鏡頭擷取頻率固定值，不開放 UI 調整；要改的話直接改這裡即可
 const SCAN_INTERVAL_MS = 500
@@ -10,6 +11,7 @@ export default function StreamPanel({ onResult }) {
   const timerRef = useRef(null)
   const streamRef = useRef(null)
   const inFlightRef = useRef(false)
+  const unmountedRef = useRef(false)
 
   const [phase, setPhase] = useState('idle') // idle | scanning | analyzing | done
   const [error, setError] = useState(null)
@@ -19,7 +21,15 @@ export default function StreamPanel({ onResult }) {
   const [detection, setDetection] = useState(null)
   const [classification, setClassification] = useState(null)
 
-  useEffect(() => () => stopCamera(), []) // eslint-disable-line react-hooks/exhaustive-deps
+  // 切到這個頁簽（元件掛載）就直接啟動鏡頭，不用使用者按按鈕確認
+  useEffect(() => {
+    unmountedRef.current = false
+    startScan()
+    return () => {
+      unmountedRef.current = true
+      stopCamera()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function stopCamera() {
     if (timerRef.current) clearInterval(timerRef.current)
@@ -39,15 +49,30 @@ export default function StreamPanel({ onResult }) {
     onResult?.(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+
+      // 等待鏡頭權限期間使用者切走了頁籤，元件已經卸載，直接關掉剛拿到的串流，不指派給 ref
+      if (unmountedRef.current) {
+        stream.getTracks().forEach((t) => t.stop())
+        return
+      }
+
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
       }
+
+      if (unmountedRef.current) {
+        stopCamera()
+        return
+      }
+
       setPhase('scanning')
       timerRef.current = setInterval(captureAndScan, SCAN_INTERVAL_MS)
     } catch (err) {
-      setError('無法存取攝影機：' + (err.message || err))
+      if (!unmountedRef.current) {
+        setError('無法存取攝影機：' + (err.message || err))
+      }
     }
   }
 
@@ -178,44 +203,7 @@ export default function StreamPanel({ onResult }) {
         </div>
       )}
 
-      {classification && (
-        <div className="result-block">
-          <div className="result-class">{classification.display_name}</div>
-          <div className="result-sub">Ensemble 信心度：{(classification.ensemble_confidence * 100).toFixed(2)}%</div>
-
-          <div className="confidence-row">
-            <div className="confidence-item">
-              <div className="label">
-                <span>CNN 35%</span>
-                <span>{(classification.cnn_confidence * 100).toFixed(1)}%</span>
-              </div>
-              <div className="confidence-bar">
-                <span style={{ width: `${classification.cnn_confidence * 100}%` }} />
-              </div>
-            </div>
-            <div className="confidence-item">
-              <div className="label">
-                <span>ViT 65%</span>
-                <span>{(classification.vit_confidence * 100).toFixed(1)}%</span>
-              </div>
-              <div className="confidence-bar">
-                <span style={{ width: `${classification.vit_confidence * 100}%` }} />
-              </div>
-            </div>
-          </div>
-
-          <div className={`status-pill ${classification.is_safe ? 'safe' : 'warning'}`}>
-            {classification.is_safe ? '✓ 輪胎狀態：安全' : '⚠ 輪胎狀態：不安全'}
-          </div>
-          {!classification.is_safe && (
-            <div className="alert warn">
-              {classification.class_name === 'BALD'
-                ? '胎紋可能已磨平，建議盡快前往車廠檢查。'
-                : '偵測到輪胎異常，建議盡快前往車廠檢查。'}
-            </div>
-          )}
-        </div>
-      )}
+      {classification && <ClassificationResult classification={classification} />}
     </section>
   )
 }
