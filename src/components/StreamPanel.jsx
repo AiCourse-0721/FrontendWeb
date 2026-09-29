@@ -11,7 +11,11 @@ export default function StreamPanel({ onResult }) {
   const timerRef = useRef(null)
   const streamRef = useRef(null)
   const inFlightRef = useRef(false)
-  const unmountedRef = useRef(false)
+  // 每次呼叫 startScan() 各自的版號，取代單一共用旗標；
+  // React.StrictMode 開發模式下 effect 會「掛載→清理→再掛載」跑兩次，
+  // 共用旗標會被第二次掛載重置回 false，導致第一次呼叫拿到的鏡頭串流
+  // 誤判成「還活著」而沒被關掉，變成關不掉的孤兒串流
+  const scanGenerationRef = useRef(0)
 
   const [phase, setPhase] = useState('idle') // idle | scanning | analyzing | done
   const [error, setError] = useState(null)
@@ -23,10 +27,9 @@ export default function StreamPanel({ onResult }) {
 
   // 切到這個頁簽（元件掛載）就直接啟動鏡頭，不用使用者按按鈕確認
   useEffect(() => {
-    unmountedRef.current = false
     startScan()
     return () => {
-      unmountedRef.current = true
+      scanGenerationRef.current += 1 // 作廢這次掛載期間所有還在等待中的 startScan() 呼叫
       stopCamera()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -41,6 +44,8 @@ export default function StreamPanel({ onResult }) {
   }
 
   async function startScan() {
+    const myGeneration = ++scanGenerationRef.current
+
     setError(null)
     setDetection(null)
     setClassification(null)
@@ -50,8 +55,8 @@ export default function StreamPanel({ onResult }) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
 
-      // 等待鏡頭權限期間使用者切走了頁籤，元件已經卸載，直接關掉剛拿到的串流，不指派給 ref
-      if (unmountedRef.current) {
+      // 這次呼叫在等待鏡頭權限期間，已經被之後的清理或新一輪 startScan() 作廢，直接關掉剛拿到的串流，不指派給 ref
+      if (scanGenerationRef.current !== myGeneration) {
         stream.getTracks().forEach((t) => t.stop())
         return
       }
@@ -62,7 +67,7 @@ export default function StreamPanel({ onResult }) {
         await videoRef.current.play()
       }
 
-      if (unmountedRef.current) {
+      if (scanGenerationRef.current !== myGeneration) {
         stopCamera()
         return
       }
@@ -70,19 +75,21 @@ export default function StreamPanel({ onResult }) {
       setPhase('scanning')
       timerRef.current = setInterval(captureAndScan, SCAN_INTERVAL_MS)
     } catch (err) {
-      if (!unmountedRef.current) {
+      if (scanGenerationRef.current === myGeneration) {
         setError('無法存取攝影機：' + (err.message || err))
       }
     }
   }
 
   function stopScan() {
+    scanGenerationRef.current += 1
     stopCamera()
     setPhase('idle')
   }
 
   async function captureAndScan() {
     if (inFlightRef.current) return
+    const myGeneration = scanGenerationRef.current
     const video = videoRef.current
     if (!video || video.readyState < 2) return
 
@@ -99,6 +106,10 @@ export default function StreamPanel({ onResult }) {
         const start = performance.now()
         try {
           const result = await quickDetectTire(blob)
+
+          // 這輪掃描等 API 回應的期間，已經被停止/重新啟動/卸載取代，結果作廢，不更新畫面
+          if (scanGenerationRef.current !== myGeneration) return
+
           setLatency(Math.round(performance.now() - start))
           setScanCount((n) => n + 1)
           setError(null)
@@ -111,18 +122,26 @@ export default function StreamPanel({ onResult }) {
 
             try {
               const { detection: det, classification: cls } = await analyzeTireImage(blob)
+
+              // 分析跑完時這輪掃描已經作廢（使用者已離開/重新掃描），不要把結果套用到目前畫面
+              if (scanGenerationRef.current !== myGeneration) return
+
               setDetection(det)
               setClassification(cls)
               onResult?.(cls ? { class: cls.class_name, ...cls } : null)
               setPhase('done')
             } catch (err) {
-              setError(err.message || '分析失敗，請重新掃描')
-              setPhase('idle')
+              if (scanGenerationRef.current === myGeneration) {
+                setError(err.message || '分析失敗，請重新掃描')
+                setPhase('idle')
+              }
             }
           }
         } catch (err) {
           // quick-detect 本身失敗（例如網路問題），不中斷掃描，等下一輪重試
-          setError(err.message || '偵測失敗')
+          if (scanGenerationRef.current === myGeneration) {
+            setError(err.message || '偵測失敗')
+          }
         } finally {
           inFlightRef.current = false
         }
