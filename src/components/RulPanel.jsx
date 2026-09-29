@@ -1,13 +1,36 @@
 import { useEffect, useState } from 'react'
 import { predictTireRul } from '../api.js'
 
+const TREAD_DEPTH_MIN = 0
+const TREAD_DEPTH_MAX = 8
+const EXPECTED_LIFE_MIN = 50000
+const EXPECTED_LIFE_MAX = 80000
+
 const DEFAULTS = {
   current_tread_depth: 5.019628,
-  expected_tyre_life: 82318,
+  expected_tyre_life: 80000,
   kilometers_driven: 26858
 }
 
 const DEBOUNCE_MS = 500
+
+// 三個欄位的合理範圍檢查；回傳 null 代表通過，否則回傳要顯示的錯誤文字
+function validateForm({ current_tread_depth, expected_tyre_life, kilometers_driven }) {
+  const depth = Number(current_tread_depth)
+  const life = Number(expected_tyre_life)
+  const km = Number(kilometers_driven)
+
+  if (!Number.isFinite(depth) || depth < TREAD_DEPTH_MIN || depth > TREAD_DEPTH_MAX) {
+    return `目前胎紋深度須介於 ${TREAD_DEPTH_MIN}～${TREAD_DEPTH_MAX} mm 之間`
+  }
+  if (!Number.isFinite(life) || life < EXPECTED_LIFE_MIN || life > EXPECTED_LIFE_MAX) {
+    return `預期輪胎壽命須介於 ${EXPECTED_LIFE_MIN.toLocaleString()}～${EXPECTED_LIFE_MAX.toLocaleString()} km 之間`
+  }
+  if (!Number.isFinite(km) || km < 0 || km > life) {
+    return '目前已行駛里程不可小於 0，也不可超過預期輪胎壽命'
+  }
+  return null
+}
 
 export default function RulPanel({ detection }) {
   const [form, setForm] = useState(DEFAULTS)
@@ -19,6 +42,8 @@ export default function RulPanel({ detection }) {
     detection &&
     (detection.class === 'BAD' || detection.class === 'BALD')
 
+  const validationError = validateForm(form)
+
   function update(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
   }
@@ -26,11 +51,11 @@ export default function RulPanel({ detection }) {
   useEffect(() => {
     if (blockedClass) return
 
-    const depth = Number(form.current_tread_depth)
-    const life = Number(form.expected_tyre_life)
-    const km = Number(form.kilometers_driven)
-
-    if (!(depth > 0) || !(life > 0) || !(km > 0)) return
+    if (validationError) {
+      setResult(null)
+      setError(null)
+      return
+    }
 
     const timer = setTimeout(async () => {
       setLoading(true)
@@ -38,9 +63,9 @@ export default function RulPanel({ detection }) {
 
       try {
         const data = await predictTireRul({
-          current_tread_depth: depth,
-          expected_tyre_life: life,
-          kilometers_driven: km
+          current_tread_depth: Number(form.current_tread_depth),
+          expected_tyre_life: Number(form.expected_tyre_life),
+          kilometers_driven: Number(form.kilometers_driven)
         })
 
         setResult(data)
@@ -56,7 +81,8 @@ export default function RulPanel({ detection }) {
     form.current_tread_depth,
     form.expected_tyre_life,
     form.kilometers_driven,
-    blockedClass
+    blockedClass,
+    validationError
   ])
 
   return (
@@ -103,7 +129,8 @@ export default function RulPanel({ detection }) {
             <input
               type="number"
               step="0.000001"
-              min="0.01"
+              min={TREAD_DEPTH_MIN}
+              max={TREAD_DEPTH_MAX}
               value={form.current_tread_depth}
               onChange={(e) =>
                 update(
@@ -114,7 +141,7 @@ export default function RulPanel({ detection }) {
             />
 
             <span className="helper">
-              未輸入時使用預設值 5.019628 mm，建議填入實測值。
+              範圍 {TREAD_DEPTH_MIN}～{TREAD_DEPTH_MAX} mm，未輸入時使用預設值 5.019628 mm，建議填入實測值。
             </span>
           </div>
 
@@ -127,7 +154,8 @@ export default function RulPanel({ detection }) {
             <input
               type="number"
               step="1000"
-              min="1"
+              min={EXPECTED_LIFE_MIN}
+              max={EXPECTED_LIFE_MAX}
               value={form.expected_tyre_life}
               onChange={(e) =>
                 update(
@@ -136,6 +164,10 @@ export default function RulPanel({ detection }) {
                 )
               }
             />
+
+            <span className="helper">
+              範圍 {EXPECTED_LIFE_MIN.toLocaleString()}～{EXPECTED_LIFE_MAX.toLocaleString()} km
+            </span>
           </div>
 
           {/* =========================
@@ -147,7 +179,8 @@ export default function RulPanel({ detection }) {
             <input
               type="number"
               step="1000"
-              min="1"
+              min={0}
+              max={form.expected_tyre_life}
               value={form.kilometers_driven}
               onChange={(e) =>
                 update(
@@ -156,7 +189,20 @@ export default function RulPanel({ detection }) {
                 )
               }
             />
+
+            <span className="helper">
+              不可小於 0，也不可超過上方填寫的預期輪胎壽命
+            </span>
           </div>
+
+          {/* =========================
+              驗證錯誤
+          ========================= */}
+          {validationError && (
+            <div className="alert warn">
+              {validationError}
+            </div>
+          )}
 
           {/* =========================
               Loading

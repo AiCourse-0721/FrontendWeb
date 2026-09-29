@@ -26,6 +26,7 @@ export default function TurnstileWidget() {
       <Turnstile
         ref={ref}
         siteKey={TURNSTILE_SITE_KEY}
+        options={{ size: 'compact' }}
         onSuccess={setTurnstileToken}
         onExpire={() => setTurnstileToken(null)}
         onError={() => setTurnstileToken(null)}

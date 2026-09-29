@@ -53,6 +53,7 @@ export default function App() {
     <>
       <BackgroundFX />
       <ThemeToggle theme={theme} onToggle={toggleTheme} />
+      <TurnstileWidget />
       <div className="app-shell">
         <Header />
 
@@ -69,8 +70,6 @@ export default function App() {
             </button>
           ))}
         </nav>
-
-        <TurnstileWidget />
 
         <div className={`panel-grid ${detection ? 'two-col' : ''}`}>
           {mode === 'detect' && <DetectPanel onResult={setDetection} />}

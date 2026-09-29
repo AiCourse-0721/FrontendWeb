@@ -236,13 +236,20 @@ body {
 }
 
 /* ---------- Turnstile widget ---------- */
+/* 塞在左下角、縮小 + 半透明，平常不會搶畫面焦點；維持可點擊，避免真的跳出挑戰時按不到 */
 .turnstile-widget {
-  display: flex;
-  justify-content: center;
-  margin: 4px 0 -4px;
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 5;
+  transform: scale(0.72);
+  transform-origin: bottom left;
+  opacity: 0.35;
+  transition: opacity 0.2s ease;
 }
-.turnstile-widget:empty {
-  margin: 0;
+.turnstile-widget:hover,
+.turnstile-widget:focus-within {
+  opacity: 1;
 }
 
 /* ---------- Status dot (inline, header) ---------- */
@@ -452,9 +459,9 @@ body {
   width: 100%;
 }
 .btn.danger {
-  border-color: rgba(255, 59, 59, 0.55);
-  color: #ffb3b3;
-  background: linear-gradient(135deg, rgba(255, 59, 59, 0.14), rgba(255, 59, 59, 0.04));
+  border-color: color-mix(in srgb, var(--red) 55%, transparent);
+  color: var(--red);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--red) 14%, transparent), color-mix(in srgb, var(--red) 4%, transparent));
 }
 .btn.ghost {
   background: transparent;
@@ -598,9 +605,9 @@ input[type='number']:focus {
   border: 1px solid;
 }
 .alert.error {
-  color: #ffb3b3;
-  border-color: rgba(255, 59, 59, 0.4);
-  background: rgba(255, 59, 59, 0.08);
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
 }
 .alert.info {
   color: var(--primary-soft);
@@ -609,9 +616,9 @@ input[type='number']:focus {
   text-align: center;
 }
 .alert.warn {
-  color: #ffd58a;
-  border-color: rgba(255, 176, 32, 0.4);
-  background: rgba(255, 176, 32, 0.08);
+  color: var(--amber);
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
   text-align: center;
 }
 
