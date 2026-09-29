@@ -49,7 +49,12 @@ export default function RulPanel({ detection }) {
   }
 
   useEffect(() => {
-    if (blockedClass) return
+    if (blockedClass) {
+      // 輪胎判定為故障/磨平時，清掉舊的預測結果跟錯誤訊息，避免殘留數字之後又跳出來造成誤會
+      setResult(null)
+      setError(null)
+      return
+    }
 
     if (validationError) {
       setResult(null)
