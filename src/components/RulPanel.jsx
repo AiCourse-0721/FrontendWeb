@@ -75,6 +75,8 @@ export default function RulPanel({ detection }) {
 
         setResult(data)
       } catch (err) {
+        // 這次請求失敗，把上一次成功的舊結果一併清掉，不然錯誤訊息會跟過期的數字同時顯示
+        setResult(null)
         setError(err.message || '預測失敗')
       } finally {
         setLoading(false)
@@ -133,7 +135,7 @@ export default function RulPanel({ detection }) {
 
             <input
               type="number"
-              step="0.000001"
+              step="0.1"
               min={TREAD_DEPTH_MIN}
               max={TREAD_DEPTH_MAX}
               value={form.current_tread_depth}
