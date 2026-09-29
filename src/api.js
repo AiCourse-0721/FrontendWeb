@@ -1,4 +1,27 @@
+import { getSessionToken, invalidateSessionToken } from './session.js'
+import { SKIP_AUTH } from './turnstile.js'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+
+// 全部端點都會使用 session token 來驗證請求是否合法
+// session token是透過 Cloudflare Turnstile驗證成功後而取得
+// 呼叫後端API時需要附上目前的 session token
+// 呼叫API時收到 401/403 錯誤代表 session 失效或過期
+// 當快取失效時在下一次呼叫自動重新換發，不用使用者手動重新整理頁面
+async function sessionFetch(url, options = {}) {
+  if (SKIP_AUTH) return fetch(url, options)
+
+  const token = await getSessionToken()
+  const headers = { ...options.headers, 'X-Session-Token': token }
+  const res = await fetch(url, { ...options, headers })
+
+  if (res.status === 401 || res.status === 403) {
+    invalidateSessionToken()
+    throw new Error('連線驗證已過期，請稍等片刻讓系統重新驗證，再試一次')
+  }
+
+  return res
+}
 
 async function handleResponse(res) {
   if (!res.ok) {
@@ -39,7 +62,7 @@ export async function detectTire(file, { withAnnotatedImage = true, withCrop = t
     with_annotated_image: String(withAnnotatedImage),
     with_crop: String(withCrop)
   })
-  const res = await fetch(`${API_BASE_URL}/api/v1/detect?${params}`, {
+  const res = await sessionFetch(`${API_BASE_URL}/api/v1/detect?${params}`, {
     method: 'POST',
     body: form,
     signal
@@ -55,7 +78,7 @@ export async function classifyTire(fileOrBase64, { signal } = {}) {
   const form = new FormData()
   const blob = typeof fileOrBase64 === 'string' ? base64ToBlob(fileOrBase64) : fileOrBase64
   form.append('file', blob, 'crop.png')
-  const res = await fetch(`${API_BASE_URL}/api/v1/classify`, {
+  const res = await sessionFetch(`${API_BASE_URL}/api/v1/classify`, {
     method: 'POST',
     body: form,
     signal
@@ -79,7 +102,7 @@ export async function analyzeTireImage(file, { signal } = {}) {
  * API 2 — 送出剩餘壽命權重參數：POST /api/v1/predict-rul
  */
 export async function predictTireRul(payload, { signal } = {}) {
-  const res = await fetch(`${API_BASE_URL}/api/v1/predict-rul`, {
+  const res = await sessionFetch(`${API_BASE_URL}/api/v1/predict-rul`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -96,7 +119,7 @@ export async function predictTireRul(payload, { signal } = {}) {
 export async function quickDetectTire(blob, { signal } = {}) {
   const form = new FormData()
   form.append('file', blob, 'frame.jpg')
-  const res = await fetch(`${API_BASE_URL}/api/v1/detect/quick`, {
+  const res = await sessionFetch(`${API_BASE_URL}/api/v1/detect/quick`, {
     method: 'POST',
     body: form,
     signal
@@ -111,6 +134,6 @@ export async function quickDetectTire(blob, { signal } = {}) {
  * 健康檢查：GET /health
  */
 export async function checkHealth({ signal } = {}) {
-  const res = await fetch(`${API_BASE_URL}/health`, { signal })
+  const res = await sessionFetch(`${API_BASE_URL}/health`, { signal })
   return handleResponse(res)
 }

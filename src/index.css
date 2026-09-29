@@ -235,6 +235,16 @@ body {
   height: 18px;
 }
 
+/* ---------- Turnstile widget ---------- */
+.turnstile-widget {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 -4px;
+}
+.turnstile-widget:empty {
+  margin: 0;
+}
+
 /* ---------- Status dot (inline, header) ---------- */
 .status-dot {
   width: 9px;
