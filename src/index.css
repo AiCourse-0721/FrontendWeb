@@ -236,20 +236,69 @@ body {
 }
 
 /* ---------- Turnstile widget ---------- */
-/* 塞在左下角、縮小 + 半透明，平常不會搶畫面焦點；維持可點擊，避免真的跳出挑戰時按不到 */
+/* 平常只露出一顆小圖示（驗證中轉圈圈／成功打勾），真正的 widget 縮到 0 大小但
+   照樣在背景跑；點擊圖示或滑鼠移入才展開，展開後可以再點一次收回去 */
 .turnstile-widget {
   position: fixed;
   left: 12px;
   bottom: 12px;
   z-index: 5;
-  transform: scale(0.72);
-  transform-origin: bottom left;
-  opacity: 0.35;
-  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: flex-end;
 }
-.turnstile-widget:hover,
-.turnstile-widget:focus-within {
+
+.turnstile-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  backdrop-filter: blur(10px);
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+.turnstile-badge:hover {
+  border-color: var(--panel-border-strong);
+  transform: translateY(-1px);
+}
+
+.turnstile-badge-spinner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--panel-border);
+  border-top-color: var(--text-dim);
+  animation: spin 0.8s linear infinite;
+}
+
+.turnstile-frame {
+  max-width: 0;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(0.85);
+  transform-origin: bottom left;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.turnstile-widget:hover .turnstile-frame,
+.turnstile-widget:focus-within .turnstile-frame,
+.turnstile-widget.expanded .turnstile-frame {
+  max-width: 200px;
+  max-height: 150px;
   opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  margin-left: 8px;
 }
 
 /* ---------- Status dot (inline, header) ---------- */

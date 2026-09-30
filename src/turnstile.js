@@ -11,6 +11,11 @@ export const SKIP_AUTH = import.meta.env.VITE_SKIP_AUTH === 'true'
 
 let widgetRef = null
 let currentToken = null
+// widget 是否已經真正 render 完成（對應套件的 onWidgetLoad callback）。
+// reset() 內部在 widget 還沒 render 完成時會印 console.warn('Turnstile has
+// not been loaded')，這是 console.warn 不是 throw，try/catch 攔不到，
+// 唯一的辦法是自己追蹤這個狀態、還沒 ready 前根本不呼叫 reset()。
+let widgetReady = false
 
 export function registerTurnstileRef(ref) {
   widgetRef = ref
@@ -19,6 +24,11 @@ export function registerTurnstileRef(ref) {
 export function unregisterTurnstileRef() {
   widgetRef = null
   currentToken = null
+  widgetReady = false
+}
+
+export function setWidgetReady(ready) {
+  widgetReady = ready
 }
 
 export function setTurnstileToken(token) {
@@ -32,5 +42,7 @@ export function getTurnstileToken() {
 // token 是一次性的，送出一次請求後就要重置 widget 才能拿到下一個
 export function resetTurnstileWidget() {
   currentToken = null
-  widgetRef?.reset()
+  if (widgetReady) {
+    widgetRef?.reset()
+  }
 }
