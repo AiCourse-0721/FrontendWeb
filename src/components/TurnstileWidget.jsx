@@ -7,6 +7,7 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAAFImq6Q7GHJ7pmm6'
 
 export default function TurnstileWidget() {
   const ref = useRef(null)
+  const containerRef = useRef(null)
   const [verified, setVerified] = useState(false)
   const [expanded, setExpanded] = useState(false)
 
@@ -21,6 +22,22 @@ export default function TurnstileWidget() {
     return () => unregisterTurnstileRef()
   }, [])
 
+  // 點擊 toggle 展開後，要點容器「外面」才收合。不能靠 CSS :focus-within，
+  // 因為 Cloudflare 是跨網域 iframe，一旦滑鼠點到裡面讓它拿到焦點，
+  // 焦點幾乎不會自動放掉，滑鼠移開也沒用，畫面會卡在展開狀態收不回去。
+  useEffect(() => {
+    if (!expanded) return
+
+    function handleOutsideClick(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setExpanded(false)
+      }
+    }
+
+    document.addEventListener('click', handleOutsideClick)
+    return () => document.removeEventListener('click', handleOutsideClick)
+  }, [expanded])
+
   if (SKIP_AUTH || !TURNSTILE_SITE_KEY) return null
 
   function handleSuccess(token) {
@@ -34,7 +51,7 @@ export default function TurnstileWidget() {
   }
 
   return (
-    <div className={`turnstile-widget ${expanded ? 'expanded' : ''}`}>
+    <div ref={containerRef} className={`turnstile-widget ${expanded ? 'expanded' : ''}`}>
       <button
         type="button"
         className="turnstile-badge"
